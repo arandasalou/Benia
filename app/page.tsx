@@ -1,8 +1,42 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { offers, categories, type Category } from "@/lib/offers";
+import { useEffect, useMemo, useState } from "react";
+import { supabase } from "@/lib/supabase";
 import OfferCard from "@/components/OfferCard";
+
+type Category =
+  | "Todas"
+  | "Finanzas"
+  | "Crypto"
+  | "Apps"
+  | "Business"
+  | "Ofertas";
+
+type Offer = {
+  id: number;
+  brand: string;
+  category: Exclude<Category, "Todas">;
+  icon: string | null;
+  title: string;
+  reward: string;
+  description: string | null;
+  referral_url: string;
+  conditions: string[] | null;
+  verified: boolean | null;
+  source_type: string | null;
+  score: number | null;
+  expires_at: string | null;
+  active: boolean | null;
+};
+
+const categories: Category[] = [
+  "Todas",
+  "Finanzas",
+  "Crypto",
+  "Apps",
+  "Business",
+  "Ofertas",
+];
 
 const interests = [
   { icon: "💰", label: "Ganar dinero" },
@@ -14,18 +48,83 @@ const interests = [
 ];
 
 export default function Home() {
+  const [offers, setOffers] = useState<Offer[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
   const [active, setActive] = useState<Category>("Todas");
   const [interestOpen, setInterestOpen] = useState(false);
 
-  const filtered = useMemo(
-    () =>
-      active === "Todas"
-        ? offers
-        : offers.filter((offer) => offer.category === active),
-    [active]
-  );
+  useEffect(() => {
+    async function loadOffers() {
+      const { data, error } = await supabase
+        .from("offers")
+        .select("*")
+        .eq("active", true)
+        .order("score", { ascending: false });
+
+      if (error) {
+        console.error(error);
+        setError(error.message);
+      } else {
+        setOffers((data ?? []) as Offer[]);
+      }
+
+      setLoading(false);
+    }
+
+    loadOffers();
+  }, []);
+
+  const filtered = useMemo(() => {
+    if (active === "Todas") {
+      return offers;
+    }
+
+    return offers.filter((offer) => offer.category === active);
+  }, [active, offers]);
 
   const featured = offers[0];
+
+  const endingSoon = useMemo(() => {
+    return offers
+      .filter((offer) => offer.expires_at)
+      .sort((a, b) => {
+        return (
+          new Date(a.expires_at!).getTime() -
+          new Date(b.expires_at!).getTime()
+        );
+      })[0];
+  }, [offers]);
+
+  if (loading) {
+    return (
+      <main className="loading-screen">
+        <div className="loading-logo">
+          <span className="brand-mark">B</span>
+          <span>benia</span>
+        </div>
+
+        <div className="loading-spinner" />
+
+        <p>Descubriendo oportunidades...</p>
+      </main>
+    );
+  }
+
+  if (error) {
+    return (
+      <main className="loading-screen">
+        <div className="loading-logo">
+          <span className="brand-mark">B</span>
+          <span>benia</span>
+        </div>
+
+        <h2>No hemos podido cargar las ofertas</h2>
+        <p>{error}</p>
+      </main>
+    );
+  }
 
   return (
     <main>
@@ -114,6 +213,7 @@ export default function Home() {
 
                     setActive(category as Category);
                     setInterestOpen(false);
+
                     document
                       .getElementById("ofertas")
                       ?.scrollIntoView({ behavior: "smooth" });
@@ -151,13 +251,15 @@ export default function Home() {
 
           <div className="stat-card">
             <span className="stat-icon">✦</span>
-            <strong>3</strong>
+            <strong>{Math.min(offers.length, 3)}</strong>
             <small>nuevas oportunidades</small>
           </div>
 
           <div className="stat-card">
             <span className="stat-icon">⏳</span>
-            <strong>2</strong>
+            <strong>
+              {offers.filter((offer) => offer.expires_at).length}
+            </strong>
             <small>terminan pronto</small>
           </div>
 
@@ -170,46 +272,48 @@ export default function Home() {
       </section>
 
       {/* FEATURED */}
-      <section className="featured-section">
-        <div className="featured-card">
-          <div className="featured-background" />
+      {featured && (
+        <section className="featured-section">
+          <div className="featured-card">
+            <div className="featured-background" />
 
-          <div className="featured-content">
-            <div className="featured-label">
-              🔥 OPORTUNIDAD DESTACADA
-            </div>
-
-            <div className="featured-brand">
-              <div className="featured-icon">{featured.icon}</div>
-
-              <div>
-                <span>{featured.category}</span>
-                <h2>{featured.brand}</h2>
+            <div className="featured-content">
+              <div className="featured-label">
+                🔥 OPORTUNIDAD DESTACADA
               </div>
+
+              <div className="featured-brand">
+                <div className="featured-icon">{featured.icon}</div>
+
+                <div>
+                  <span>{featured.category}</span>
+                  <h2>{featured.brand}</h2>
+                </div>
+              </div>
+
+              <div className="featured-reward">{featured.reward}</div>
+
+              <p>{featured.description}</p>
+
+              <a
+                href={featured.referral_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="featured-cta"
+              >
+                CONSEGUIR OFERTA
+                <span>↗</span>
+              </a>
             </div>
 
-            <div className="featured-reward">{featured.reward}</div>
-
-            <p>{featured.description}</p>
-
-            <a
-              href={featured.referralUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="featured-cta"
-            >
-              CONSEGUIR OFERTA
-              <span>↗</span>
-            </a>
+            <div className="score-box">
+              <small>BENIA SCORE</small>
+              <strong>{featured.score ?? 0}</strong>
+              <span>/100</span>
+            </div>
           </div>
-
-          <div className="score-box">
-            <small>BENIA SCORE</small>
-            <strong>94</strong>
-            <span>/100</span>
-          </div>
-        </div>
-      </section>
+        </section>
+      )}
 
       {/* OFFERS */}
       <section id="ofertas" className="offers-section">
@@ -248,36 +352,46 @@ export default function Home() {
       </section>
 
       {/* ENDING SOON */}
-      <section className="ending-section">
-        <div className="eyebrow">⏳ NO LO DEJES PARA MAÑANA</div>
+      {endingSoon && (
+        <section className="ending-section">
+          <div className="eyebrow">⏳ NO LO DEJES PARA MAÑANA</div>
 
-        <div className="ending-heading">
-          <h2>Terminan pronto</h2>
-          <span>Ofertas con fecha límite</span>
-        </div>
-
-        <div className="ending-card">
-          <div className="ending-icon">O</div>
-
-          <div className="ending-info">
-            <strong>Openbank</strong>
-            <span>Oferta de bienvenida</span>
+          <div className="ending-heading">
+            <h2>Terminan pronto</h2>
+            <span>Ofertas con fecha límite</span>
           </div>
 
-          <div className="ending-time">
-            <small>FINALIZA</small>
-            <strong>30 SEP</strong>
-          </div>
+          <div className="ending-card">
+            <div className="ending-icon">{endingSoon.icon}</div>
 
-          <a
-            href="https://www.openbank.es/"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Ver oferta ↗
-          </a>
-        </div>
-      </section>
+            <div className="ending-info">
+              <strong>{endingSoon.brand}</strong>
+              <span>{endingSoon.title}</span>
+            </div>
+
+            <div className="ending-time">
+              <small>FINALIZA</small>
+              <strong>
+                {new Date(endingSoon.expires_at!).toLocaleDateString(
+                  "es-ES",
+                  {
+                    day: "2-digit",
+                    month: "short",
+                  }
+                )}
+              </strong>
+            </div>
+
+            <a
+              href={endingSoon.referral_url}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              Ver oferta ↗
+            </a>
+          </div>
+        </section>
+      )}
 
       {/* HOW IT WORKS */}
       <section id="como-funciona" className="how">
@@ -326,13 +440,13 @@ export default function Home() {
         </div>
 
         <p>
-          BENIA es una plataforma informativa y de referencias. No es un banco,
-          broker ni asesor financiero. Las condiciones de las ofertas pueden
-          cambiar; comprueba siempre los términos del proveedor.
+          BENIA es una plataforma informativa y de referencias. No es un
+          banco, broker ni asesor financiero. Las condiciones de las ofertas
+          pueden cambiar; comprueba siempre los términos del proveedor.
         </p>
 
         <span>© 2026 BENIA</span>
       </footer>
     </main>
   );
-           }
+              }
