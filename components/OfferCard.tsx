@@ -1,6 +1,20 @@
-import type { Offer } from "@/lib/offers";
+type Offer = {
+  id: number;
+  brand: string;
+  category: string;
+  icon: string | null;
+  title: string;
+  reward: string;
+  description: string | null;
+  referral_url: string;
+  conditions: string[] | null;
+  verified: boolean | null;
+  score: number | null;
+};
 
 export default function OfferCard({ offer }: { offer: Offer }) {
+  const score = offer.score ?? 0;
+
   return (
     <article className="offer-card">
       <div className="card-top">
@@ -26,13 +40,11 @@ export default function OfferCard({ offer }: { offer: Offer }) {
           <div className="score-bar">
             <div
               className="score-fill"
-              style={{
-                width: `${offer.verified ? 94 : 78}%`,
-              }}
+              style={{ width: `${score}%` }}
             />
           </div>
 
-          <strong>{offer.verified ? 94 : 78}</strong>
+          <strong>{score}</strong>
         </div>
       </div>
 
@@ -40,7 +52,7 @@ export default function OfferCard({ offer }: { offer: Offer }) {
         <summary>Ver condiciones</summary>
 
         <ul>
-          {offer.conditions.map((condition, index) => (
+          {(offer.conditions ?? []).map((condition, index) => (
             <li key={index}>{condition}</li>
           ))}
         </ul>
@@ -48,7 +60,7 @@ export default function OfferCard({ offer }: { offer: Offer }) {
 
       <a
         className="offer-cta"
-        href={offer.referralUrl}
+        href={offer.referral_url}
         target="_blank"
         rel="noopener noreferrer"
       >
