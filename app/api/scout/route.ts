@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { supabase } from "@/lib/supabase";
+import { supabaseAdmin } from "@/lib/supabase-admin";
 
 function extractJson(text: string) {
   const cleaned = text
@@ -24,6 +24,7 @@ function extractJson(text: string) {
 
 export async function GET(request: Request) {
   try {
+    // Security
     const authHeader = request.headers.get("authorization");
     const secret = process.env.SCOUT_SECRET;
 
@@ -34,8 +35,12 @@ export async function GET(request: Request) {
       );
     }
 
-    const openRouterKey = process.env.OPENROUTER_API_KEY;
-    const resendKey = process.env.RESEND_API_KEY;
+    // API keys
+    const openRouterKey =
+      process.env.OPENROUTER_API_KEY;
+
+    const resendKey =
+      process.env.RESEND_API_KEY;
 
     if (!openRouterKey) {
       return NextResponse.json(
@@ -51,55 +56,56 @@ export async function GET(request: Request) {
       );
     }
 
-    /*
-     * Get existing active offers so Scout can avoid duplicates.
-     */
-
+    // Existing BENIA offers
     const { data: existingOffers, error: offersError } =
-      await supabase
+      await supabaseAdmin
         .from("offers")
         .select("brand,title,category")
         .eq("active", true)
         .limit(100);
 
     if (offersError) {
-      console.error(offersError);
+      console.error("Offers read error:", offersError);
     }
 
-    /*
-     * Get previous Scout opportunities so ignored
-     * opportunities are not suggested again.
-     */
-
+    // Previous Scout opportunities
     const { data: previousScout, error: scoutError } =
-      await supabase
+      await supabaseAdmin
         .from("scout_opportunities")
-        .select("brand,title,status,source_url")
+        .select(
+          "brand,title,status,source_url"
+        )
         .limit(200);
 
     if (scoutError) {
-      console.error(scoutError);
+      console.error(
+        "Scout history read error:",
+        scoutError
+      );
     }
 
-    const existing = (existingOffers ?? [])
-      .map(
-        (offer) =>
-          `${offer.brand}: ${offer.title}`
-      )
-      .join("\n");
+    const existing =
+      (existingOffers ?? [])
+        .map(
+          (offer) =>
+            `${offer.brand}: ${offer.title}`
+        )
+        .join("\n");
 
-    const previous = (previousScout ?? [])
-      .map(
-        (offer) =>
-          `${offer.brand}: ${offer.title} [${offer.status}] ${offer.source_url ?? ""}`
-      )
-      .join("\n");
+    const previous =
+      (previousScout ?? [])
+        .map(
+          (offer) =>
+            `${offer.brand}: ${offer.title} [${offer.status}] ${offer.source_url ?? ""}`
+        )
+        .join("\n");
 
+    // AI prompt
     const prompt = `
 Eres BENIA SCOUT.
 
-Tu misión es encontrar UNA oportunidad REAL, ACTUAL y VERIFICABLE
-para usuarios de España.
+Tu misión es encontrar UNA oportunidad REAL,
+ACTUAL y VERIFICABLE para usuarios de España.
 
 BUSCA oportunidades en:
 
@@ -124,13 +130,18 @@ REGLAS CRÍTICAS:
 6. Prioriza fuentes oficiales.
 7. La fuente debe poder comprobarse.
 8. Comprueba que la promoción sigue vigente.
-9. Comprueba que está disponible para usuarios de España cuando sea relevante.
+9. Comprueba que está disponible para usuarios de España.
 10. Evita oportunidades que ya estén en BENIA.
 11. Evita oportunidades que ya hayan sido ignoradas.
 12. El SCORE debe ser de 0 a 100.
-13. Si no existe una oportunidad suficientemente fiable, devuelve null.
+13. Si no existe una oportunidad suficientemente fiable,
+devuelve opportunity como null.
 14. No confundas una promoción general con un referral personalizado.
 15. Si existe una fecha límite, indícala.
+16. Si una recompensa depende de condiciones,
+explícalas claramente.
+17. No presentes como confirmado ningún dato que
+no aparezca respaldado por una fuente.
 
 OFERTAS ACTUALES DE BENIA:
 
@@ -159,10 +170,8 @@ Valora:
 - calidad de la fuente
 - interés para usuarios de BENIA
 
-IMPORTANTE:
-
-Una oportunidad con una recompensa alta pero condiciones
-muy difíciles NO debe recibir automáticamente una puntuación alta.
+Una recompensa alta con condiciones difíciles
+NO debe recibir automáticamente una puntuación alta.
 
 Devuelve ÚNICAMENTE JSON válido.
 
@@ -194,19 +203,20 @@ Si no encuentras una oportunidad suficientemente fiable:
 }
 `;
 
-    /*
-     * Ask OpenRouter to search the web.
-     */
-
+    // OpenRouter + Web Search
     const aiResponse = await fetch(
       "https://openrouter.ai/api/v1/chat/completions",
       {
         method: "POST",
         headers: {
-          Authorization: `Bearer ${openRouterKey}`,
-          "Content-Type": "application/json",
-          "HTTP-Referer": "https://benia.vercel.app",
-          "X-Title": "BENIA Scout",
+          Authorization:
+            `Bearer ${openRouterKey}`,
+          "Content-Type":
+            "application/json",
+          "HTTP-Referer":
+            "https://benia.vercel.app",
+          "X-Title":
+            "BENIA Scout",
         },
         body: JSON.stringify({
           model: "openrouter/free",
@@ -216,7 +226,7 @@ Si no encuentras una oportunidad suficientemente fiable:
               id: "web",
               max_results: 8,
               search_prompt:
-                "Busca promociones financieras actuales en España y prioriza fuentes oficiales.",
+                "Busca promociones financieras actuales en España. Prioriza fuentes oficiales, bases legales, páginas de promociones y documentos oficiales.",
             },
           ],
 
@@ -231,7 +241,8 @@ Si no encuentras una oportunidad suficientemente fiable:
     );
 
     if (!aiResponse.ok) {
-      const errorText = await aiResponse.text();
+      const errorText =
+        await aiResponse.text();
 
       return NextResponse.json(
         {
@@ -242,14 +253,18 @@ Si no encuentras una oportunidad suficientemente fiable:
       );
     }
 
-    const aiData = await aiResponse.json();
+    const aiData =
+      await aiResponse.json();
 
     const content =
       aiData?.choices?.[0]?.message?.content;
 
     if (!content) {
       return NextResponse.json(
-        { error: "No response from AI" },
+        {
+          error:
+            "No response from AI",
+        },
         { status: 502 }
       );
     }
@@ -257,23 +272,23 @@ Si no encuentras una oportunidad suficientemente fiable:
     let analysis;
 
     try {
-      analysis = extractJson(content);
+      analysis =
+        extractJson(content);
     } catch {
       return NextResponse.json(
         {
-          error: "AI returned invalid JSON",
+          error:
+            "AI returned invalid JSON",
           raw: content,
         },
         { status: 502 }
       );
     }
 
-    const opportunity = analysis?.opportunity;
+    const opportunity =
+      analysis?.opportunity;
 
-    /*
-     * No opportunity found.
-     */
-
+    // No opportunity
     if (!opportunity) {
       return NextResponse.json({
         success: true,
@@ -285,22 +300,19 @@ Si no encuentras una oportunidad suficientemente fiable:
       });
     }
 
-    /*
-     * Normalize score.
-     */
+    // Normalize score
+    opportunity.score =
+      Math.max(
+        0,
+        Math.min(
+          100,
+          Number(
+            opportunity.score
+          ) || 0
+        )
+      );
 
-    opportunity.score = Math.max(
-      0,
-      Math.min(
-        100,
-        Number(opportunity.score) || 0
-      )
-    );
-
-    /*
-     * Only interesting opportunities are saved.
-     */
-
+    // Minimum score
     if (opportunity.score < 70) {
       return NextResponse.json({
         success: true,
@@ -312,10 +324,7 @@ Si no encuentras una oportunidad suficientemente fiable:
       });
     }
 
-    /*
-     * Extra duplicate protection.
-     */
-
+    // Duplicate protection
     const duplicate =
       (previousScout ?? []).some(
         (item) =>
@@ -337,68 +346,96 @@ Si no encuentras una oportunidad suficientemente fiable:
       });
     }
 
-    /*
-     * Save opportunity as pending.
-     */
-
-    const { data: savedOpportunity, error: insertError } =
-      await supabase
-        .from("scout_opportunities")
-        .insert({
-          brand: opportunity.brand,
-          category: opportunity.category,
-          title: opportunity.title,
-          reward: opportunity.reward,
-          description: opportunity.description,
-          score: opportunity.score,
-          reason: opportunity.reason,
-          source_url: opportunity.source_url,
-          source_name: opportunity.source_name,
-          expires_at:
-            opportunity.expires_at || null,
-          verification_notes:
-            opportunity.verification_notes ?? [],
-          status: "pending",
-          referral_url: null,
-          referral_code: null,
-        })
-        .select()
-        .single();
+    // Save pending opportunity
+    const {
+      data: savedOpportunity,
+      error: insertError,
+    } = await supabaseAdmin
+      .from("scout_opportunities")
+      .insert({
+        brand:
+          opportunity.brand,
+        category:
+          opportunity.category,
+        title:
+          opportunity.title,
+        reward:
+          opportunity.reward,
+        description:
+          opportunity.description,
+        score:
+          opportunity.score,
+        reason:
+          opportunity.reason,
+        source_url:
+          opportunity.source_url,
+        source_name:
+          opportunity.source_name,
+        expires_at:
+          opportunity.expires_at ||
+          null,
+        verification_notes:
+          opportunity.verification_notes ??
+          [],
+        status:
+          "pending",
+        referral_url:
+          null,
+        referral_code:
+          null,
+      })
+      .select()
+      .single();
 
     if (insertError) {
-      console.error(insertError);
+      console.error(
+        "Supabase insert error:",
+        insertError
+      );
 
       return NextResponse.json(
         {
-          error: "Supabase insert error",
-          details: insertError.message,
+          error:
+            "Supabase insert error",
+          details:
+            insertError.message,
         },
         { status: 500 }
       );
     }
 
-    /*
-     * Send notification email.
-     */
-
+    // Email
     const emailHtml = `
-      <div style="font-family:Arial,sans-serif;max-width:600px;margin:auto">
+      <div style="
+        font-family:Arial,sans-serif;
+        max-width:600px;
+        margin:auto;
+        padding:20px;
+      ">
 
         <h1>🚨 Nueva oportunidad BENIA</h1>
 
-        <h2>${opportunity.brand}</h2>
+        <h2>
+          ${opportunity.brand}
+        </h2>
 
         <p>
-          <strong>${opportunity.title}</strong>
+          <strong>
+            ${opportunity.title}
+          </strong>
         </p>
 
         <p>
-          <strong>BENIA SCORE:</strong>
+          <strong>
+            BENIA SCORE:
+          </strong>
           ${opportunity.score}/100
         </p>
 
         <p>
-          <strong>Recompensa:</strong>
+          <strong>
+            Recompensa:
+          </strong>
           ${opportunity.reward}
         </p>
 
@@ -409,18 +446,26 @@ Si no encuentras una oportunidad suficientemente fiable:
         <hr />
 
         <p>
-          <strong>Motivo del score:</strong><br>
+          <strong>
+            Motivo del score:
+          </strong>
+          <br>
           ${opportunity.reason}
         </p>
 
         <p>
-          <strong>Fuente:</strong>
+          <strong>
+            Fuente:
+          </strong>
+          <br>
           <a href="${opportunity.source_url}">
             ${opportunity.source_name}
           </a>
         </p>
 
-        <h3>Condiciones verificadas</h3>
+        <h3>
+          Condiciones verificadas
+        </h3>
 
         <ul>
           ${(opportunity.verification_notes ?? [])
@@ -434,16 +479,18 @@ Si no encuentras una oportunidad suficientemente fiable:
         <hr />
 
         <p>
-          Esta oportunidad está actualmente
-          <strong>PENDIENTE</strong>.
+          Estado:
+          <strong>PENDIENTE</strong>
         </p>
 
         <p>
-          Todavía NO se ha publicado en BENIA.
+          Esta oportunidad todavía
+          NO se ha publicado en BENIA.
         </p>
 
         <p>
-          Añade tu referral cuando lo tengas.
+          Añade tu código o enlace
+          de referido cuando lo tengas.
         </p>
 
         <p>
@@ -455,37 +502,47 @@ Si no encuentras una oportunidad suficientemente fiable:
       </div>
     `;
 
-    const resendResponse = await fetch(
-      "https://api.resend.com/emails",
-      {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${resendKey}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          from:
-            "BENIA Scout <onboarding@resend.dev>",
-          to: ["delivered@resend.dev"],
-          subject:
-            `🚨 BENIA Scout: ${opportunity.brand} — Score ${opportunity.score}`,
-          html: emailHtml,
-        }),
-      }
-    );
+    const resendResponse =
+      await fetch(
+        "https://api.resend.com/emails",
+        {
+          method: "POST",
+          headers: {
+            Authorization:
+              `Bearer ${resendKey}`,
+            "Content-Type":
+              "application/json",
+          },
+          body: JSON.stringify({
+            from:
+              "BENIA Scout <onboarding@resend.dev>",
+            to:
+              ["delivered@resend.dev"],
+            subject:
+              `🚨 BENIA Scout: ${opportunity.brand} — Score ${opportunity.score}`,
+            html:
+              emailHtml,
+          }),
+        }
+      );
 
     const resendData =
       await resendResponse.json();
 
     if (!resendResponse.ok) {
-      console.error(resendData);
+      console.error(
+        "Resend error:",
+        resendData
+      );
 
       return NextResponse.json({
         success: true,
         saved: true,
         emailed: false,
-        scout: savedOpportunity,
-        email_error: resendData,
+        scout:
+          savedOpportunity,
+        email_error:
+          resendData,
         message:
           "Oportunidad guardada, pero el email no pudo enviarse.",
       });
@@ -495,17 +552,24 @@ Si no encuentras una oportunidad suficientemente fiable:
       success: true,
       saved: true,
       emailed: true,
-      scout: savedOpportunity,
-      email: resendData,
+      scout:
+        savedOpportunity,
+      email:
+        resendData,
       message:
         "BENIA Scout encontró, guardó y notificó una nueva oportunidad.",
     });
+
   } catch (error) {
-    console.error(error);
+    console.error(
+      "Scout failed:",
+      error
+    );
 
     return NextResponse.json(
       {
-        error: "Scout failed",
+        error:
+          "Scout failed",
         details:
           error instanceof Error
             ? error.message
