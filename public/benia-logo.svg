@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 160">
+  <defs>
+    <linearGradient id="g" x1="0" x2="1">
+      <stop offset="0" stop-color="#73f0c4"/><stop offset="1" stop-color="#6d8cff"/>
+    </linearGradient>
+  </defs>
+  <rect x="10" y="10" width="140" height="140" rx="42" fill="url(#g)"/>
+  <path d="M53 43h43c25 0 36 13 36 28 0 11-6 19-16 23 13 4 20 13 20 25 0 19-15 31-42 31H53V43zm30 22v20h11c8 0 12-4 12-10s-4-10-12-10H83zm0 42v21h14c9 0 14-4 14-11s-5-10-14-10H83z" fill="#10151c"/>
+  <text x="180" y="105" font-family="Arial,Helvetica,sans-serif" font-size="86" font-weight="800" letter-spacing="-4" fill="#10151c">benia</text>
+</svg>
