@@ -1,16 +1,34 @@
 import { NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase";
 
+function extractJson(text: string) {
+  const cleaned = text
+    .replace(/^```json\s*/i, "")
+    .replace(/^```\s*/i, "")
+    .replace(/\s*```$/i, "")
+    .trim();
+
+  try {
+    return JSON.parse(cleaned);
+  } catch {
+    const start = cleaned.indexOf("{");
+    const end = cleaned.lastIndexOf("}");
+
+    if (start >= 0 && end > start) {
+      return JSON.parse(cleaned.slice(start, end + 1));
+    }
+
+    throw new Error("AI returned invalid JSON");
+  }
+}
+
 export async function GET(request: Request) {
   try {
     const authHeader = request.headers.get("authorization");
     const secret = process.env.SCOUT_SECRET;
 
     if (secret && authHeader !== `Bearer ${secret}`) {
-      return NextResponse.json(
-        { error: "Unauthorized" },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const openRouterKey = process.env.OPENROUTER_API_KEY;
@@ -22,40 +40,80 @@ export async function GET(request: Request) {
       );
     }
 
+    const { data: existingOffers } = await supabase
+      .from("offers")
+      .select("brand,title,category")
+      .eq("active", true)
+      .limit(50);
+
+    const existing = (existingOffers ?? [])
+      .map((offer) => `${offer.brand}: ${offer.title}`)
+      .join("\n");
+
     const prompt = `
-Eres BENIA SCOUT, un analista de oportunidades financieras y digitales.
+Eres BENIA SCOUT, un investigador de oportunidades para usuarios de España y la UE.
 
-Tu trabajo es identificar oportunidades potencialmente interesantes para usuarios de España.
+Tu objetivo es encontrar UNA oportunidad real, actual y potencialmente interesante para BENIA.
 
-Busca y analiza oportunidades como:
-- cuentas bancarias
-- fintech
-- crypto
-- exchanges
+BUSCA en la web información reciente sobre:
+- cuentas bancarias y fintech
+- crypto y exchanges
 - cashback
-- apps
+- apps financieras
 - herramientas Business
 - bonos de bienvenida
 - programas de referidos
 - promociones temporales
 
-IMPORTANTE:
-No inventes promociones, recompensas, enlaces ni condiciones.
+REGLAS DE VERIFICACIÓN:
 
-Para esta primera prueba analiza conceptualmente qué características debería tener una buena oportunidad BENIA.
+1. No inventes promociones, recompensas, condiciones ni enlaces.
+2. Prioriza fuentes oficiales de la empresa.
+3. La oportunidad debe poder comprobarse en una fuente web.
+4. Si una recompensa aparece en una fuente secundaria pero no puede verificarse, reduce mucho el score o descártala.
+5. No confundas una promoción para todos con un programa de referidos personalizado.
+6. No uses una oferta ya existente en BENIA salvo que exista una promoción claramente nueva o mejorada.
+7. El score debe ser de 0 a 100, no de 0 a 10.
+8. Si no encuentras una oportunidad suficientemente verificable, devuelve opportunity como null.
 
-Devuelve únicamente JSON válido con esta estructura:
+OFERTAS QUE BENIA YA TIENE:
+
+${existing || "Ninguna"}
+
+Evalúa principalmente:
+- valor económico real
+- facilidad de conseguir la recompensa
+- disponibilidad para usuarios de España
+- vigencia
+- confianza de la fuente
+- claridad de condiciones
+- interés comercial para BENIA
+
+Devuelve ÚNICAMENTE JSON válido, sin markdown:
 
 {
   "opportunity": {
     "brand": "nombre",
-    "category": "Finanzas",
-    "title": "título",
-    "reward": "recompensa",
-    "description": "descripción",
+    "category": "Finanzas | Crypto | Apps | Business | Ofertas",
+    "title": "título corto",
+    "reward": "recompensa exacta según la fuente",
+    "description": "descripción factual breve",
     "score": 0,
-    "reason": "motivo del score"
+    "reason": "explicación breve del score",
+    "source_url": "https://...",
+    "source_name": "nombre de la fuente",
+    "expires_at": "YYYY-MM-DD o null",
+    "verification_notes": [
+      "dato comprobado",
+      "condición importante"
+    ]
   }
+}
+
+Si no hay una oportunidad suficientemente fiable:
+
+{
+  "opportunity": null
 }
 `;
 
@@ -71,6 +129,16 @@ Devuelve únicamente JSON válido con esta estructura:
         },
         body: JSON.stringify({
           model: "openrouter/free",
+
+          plugins: [
+            {
+              id: "web",
+              max_results: 8,
+              search_prompt:
+                "Busca información actual y verificable sobre promociones y programas de referidos. Prioriza fuentes oficiales y fechas recientes.",
+            },
+          ],
+
           messages: [
             {
               role: "user",
@@ -108,7 +176,7 @@ Devuelve únicamente JSON válido con esta estructura:
     let analysis;
 
     try {
-      analysis = JSON.parse(content);
+      analysis = extractJson(content);
     } catch {
       return NextResponse.json(
         {
@@ -119,11 +187,22 @@ Devuelve únicamente JSON válido con esta estructura:
       );
     }
 
+    const opportunity = analysis?.opportunity;
+
+    if (opportunity) {
+      opportunity.score = Math.max(
+        0,
+        Math.min(100, Number(opportunity.score) || 0)
+      );
+    }
+
     return NextResponse.json({
       success: true,
       scout: analysis,
-      message:
-        "BENIA Scout ha analizado correctamente la oportunidad.",
+      searched_web: true,
+      message: opportunity
+        ? "BENIA Scout ha encontrado y analizado una oportunidad web."
+        : "BENIA Scout no ha encontrado una oportunidad suficientemente verificable.",
     });
   } catch (error) {
     console.error(error);
