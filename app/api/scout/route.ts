@@ -28,10 +28,14 @@ export async function GET(request: Request) {
     const secret = process.env.SCOUT_SECRET;
 
     if (secret && authHeader !== `Bearer ${secret}`) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return NextResponse.json(
+        { error: "Unauthorized" },
+        { status: 401 }
+      );
     }
 
     const openRouterKey = process.env.OPENROUTER_API_KEY;
+    const resendKey = process.env.RESEND_API_KEY;
 
     if (!openRouterKey) {
       return NextResponse.json(
@@ -40,68 +44,141 @@ export async function GET(request: Request) {
       );
     }
 
-    const { data: existingOffers } = await supabase
-      .from("offers")
-      .select("brand,title,category")
-      .eq("active", true)
-      .limit(50);
+    if (!resendKey) {
+      return NextResponse.json(
+        { error: "Missing RESEND_API_KEY" },
+        { status: 500 }
+      );
+    }
+
+    /*
+     * Get existing active offers so Scout can avoid duplicates.
+     */
+
+    const { data: existingOffers, error: offersError } =
+      await supabase
+        .from("offers")
+        .select("brand,title,category")
+        .eq("active", true)
+        .limit(100);
+
+    if (offersError) {
+      console.error(offersError);
+    }
+
+    /*
+     * Get previous Scout opportunities so ignored
+     * opportunities are not suggested again.
+     */
+
+    const { data: previousScout, error: scoutError } =
+      await supabase
+        .from("scout_opportunities")
+        .select("brand,title,status,source_url")
+        .limit(200);
+
+    if (scoutError) {
+      console.error(scoutError);
+    }
 
     const existing = (existingOffers ?? [])
-      .map((offer) => `${offer.brand}: ${offer.title}`)
+      .map(
+        (offer) =>
+          `${offer.brand}: ${offer.title}`
+      )
+      .join("\n");
+
+    const previous = (previousScout ?? [])
+      .map(
+        (offer) =>
+          `${offer.brand}: ${offer.title} [${offer.status}] ${offer.source_url ?? ""}`
+      )
       .join("\n");
 
     const prompt = `
-Eres BENIA SCOUT, un investigador de oportunidades para usuarios de España y la UE.
+Eres BENIA SCOUT.
 
-Tu objetivo es encontrar UNA oportunidad real, actual y potencialmente interesante para BENIA.
+Tu misión es encontrar UNA oportunidad REAL, ACTUAL y VERIFICABLE
+para usuarios de España.
 
-BUSCA en la web información reciente sobre:
-- cuentas bancarias y fintech
-- crypto y exchanges
+BUSCA oportunidades en:
+
+- bancos
+- fintech
+- crypto
+- exchanges
 - cashback
-- apps financieras
+- aplicaciones financieras
 - herramientas Business
 - bonos de bienvenida
 - programas de referidos
 - promociones temporales
 
-REGLAS DE VERIFICACIÓN:
+REGLAS CRÍTICAS:
 
-1. No inventes promociones, recompensas, condiciones ni enlaces.
-2. Prioriza fuentes oficiales de la empresa.
-3. La oportunidad debe poder comprobarse en una fuente web.
-4. Si una recompensa aparece en una fuente secundaria pero no puede verificarse, reduce mucho el score o descártala.
-5. No confundas una promoción para todos con un programa de referidos personalizado.
-6. No uses una oferta ya existente en BENIA salvo que exista una promoción claramente nueva o mejorada.
-7. El score debe ser de 0 a 100, no de 0 a 10.
-8. Si no encuentras una oportunidad suficientemente verificable, devuelve opportunity como null.
+1. NO inventes promociones.
+2. NO inventes recompensas.
+3. NO inventes códigos.
+4. NO inventes enlaces.
+5. NO inventes condiciones.
+6. Prioriza fuentes oficiales.
+7. La fuente debe poder comprobarse.
+8. Comprueba que la promoción sigue vigente.
+9. Comprueba que está disponible para usuarios de España cuando sea relevante.
+10. Evita oportunidades que ya estén en BENIA.
+11. Evita oportunidades que ya hayan sido ignoradas.
+12. El SCORE debe ser de 0 a 100.
+13. Si no existe una oportunidad suficientemente fiable, devuelve null.
+14. No confundas una promoción general con un referral personalizado.
+15. Si existe una fecha límite, indícala.
 
-OFERTAS QUE BENIA YA TIENE:
+OFERTAS ACTUALES DE BENIA:
 
 ${existing || "Ninguna"}
 
-Evalúa principalmente:
-- valor económico real
-- facilidad de conseguir la recompensa
-- disponibilidad para usuarios de España
-- vigencia
-- confianza de la fuente
-- claridad de condiciones
-- interés comercial para BENIA
+OPORTUNIDADES YA DETECTADAS POR SCOUT:
 
-Devuelve ÚNICAMENTE JSON válido, sin markdown:
+${previous || "Ninguna"}
+
+CRITERIOS DEL BENIA SCORE:
+
+90-100 = oportunidad excepcional
+80-89 = oportunidad muy interesante
+70-79 = interesante y merece revisión
+50-69 = interés limitado
+0-49 = descartar
+
+Valora:
+
+- recompensa
+- facilidad de conseguirla
+- disponibilidad en España
+- vigencia
+- reputación de la empresa
+- claridad de condiciones
+- calidad de la fuente
+- interés para usuarios de BENIA
+
+IMPORTANTE:
+
+Una oportunidad con una recompensa alta pero condiciones
+muy difíciles NO debe recibir automáticamente una puntuación alta.
+
+Devuelve ÚNICAMENTE JSON válido.
+
+FORMATO:
 
 {
   "opportunity": {
     "brand": "nombre",
     "category": "Finanzas | Crypto | Apps | Business | Ofertas",
     "title": "título corto",
-    "reward": "recompensa exacta según la fuente",
-    "description": "descripción factual breve",
+    "reward": "recompensa exacta",
+    "description": "descripción factual",
     "score": 0,
-    "reason": "explicación breve del score",
+    "reason": "motivo del score",
     "source_url": "https://...",
-    "source_name": "nombre de la fuente",
+    "source_name": "fuente",
     "expires_at": "YYYY-MM-DD o null",
     "verification_notes": [
       "dato comprobado",
@@ -110,12 +187,16 @@ Devuelve ÚNICAMENTE JSON válido, sin markdown:
   }
 }
 
-Si no hay una oportunidad suficientemente fiable:
+Si no encuentras una oportunidad suficientemente fiable:
 
 {
   "opportunity": null
 }
 `;
+
+    /*
+     * Ask OpenRouter to search the web.
+     */
 
     const aiResponse = await fetch(
       "https://openrouter.ai/api/v1/chat/completions",
@@ -135,7 +216,7 @@ Si no hay una oportunidad suficientemente fiable:
               id: "web",
               max_results: 8,
               search_prompt:
-                "Busca información actual y verificable sobre promociones y programas de referidos. Prioriza fuentes oficiales y fechas recientes.",
+                "Busca promociones financieras actuales en España y prioriza fuentes oficiales.",
             },
           ],
 
@@ -189,20 +270,235 @@ Si no hay una oportunidad suficientemente fiable:
 
     const opportunity = analysis?.opportunity;
 
-    if (opportunity) {
-      opportunity.score = Math.max(
-        0,
-        Math.min(100, Number(opportunity.score) || 0)
+    /*
+     * No opportunity found.
+     */
+
+    if (!opportunity) {
+      return NextResponse.json({
+        success: true,
+        saved: false,
+        emailed: false,
+        opportunity: null,
+        message:
+          "BENIA Scout no ha encontrado una oportunidad suficientemente fiable.",
+      });
+    }
+
+    /*
+     * Normalize score.
+     */
+
+    opportunity.score = Math.max(
+      0,
+      Math.min(
+        100,
+        Number(opportunity.score) || 0
+      )
+    );
+
+    /*
+     * Only interesting opportunities are saved.
+     */
+
+    if (opportunity.score < 70) {
+      return NextResponse.json({
+        success: true,
+        saved: false,
+        emailed: false,
+        scout: analysis,
+        message:
+          "La oportunidad no alcanza el mínimo BENIA SCORE de 70.",
+      });
+    }
+
+    /*
+     * Extra duplicate protection.
+     */
+
+    const duplicate =
+      (previousScout ?? []).some(
+        (item) =>
+          item.brand?.toLowerCase() ===
+            opportunity.brand?.toLowerCase() &&
+          item.title?.toLowerCase() ===
+            opportunity.title?.toLowerCase()
       );
+
+    if (duplicate) {
+      return NextResponse.json({
+        success: true,
+        saved: false,
+        emailed: false,
+        duplicate: true,
+        scout: analysis,
+        message:
+          "La oportunidad ya había sido detectada anteriormente.",
+      });
+    }
+
+    /*
+     * Save opportunity as pending.
+     */
+
+    const { data: savedOpportunity, error: insertError } =
+      await supabase
+        .from("scout_opportunities")
+        .insert({
+          brand: opportunity.brand,
+          category: opportunity.category,
+          title: opportunity.title,
+          reward: opportunity.reward,
+          description: opportunity.description,
+          score: opportunity.score,
+          reason: opportunity.reason,
+          source_url: opportunity.source_url,
+          source_name: opportunity.source_name,
+          expires_at:
+            opportunity.expires_at || null,
+          verification_notes:
+            opportunity.verification_notes ?? [],
+          status: "pending",
+          referral_url: null,
+          referral_code: null,
+        })
+        .select()
+        .single();
+
+    if (insertError) {
+      console.error(insertError);
+
+      return NextResponse.json(
+        {
+          error: "Supabase insert error",
+          details: insertError.message,
+        },
+        { status: 500 }
+      );
+    }
+
+    /*
+     * Send notification email.
+     */
+
+    const emailHtml = `
+      <div style="font-family:Arial,sans-serif;max-width:600px;margin:auto">
+
+        <h1>🚨 Nueva oportunidad BENIA</h1>
+
+        <h2>${opportunity.brand}</h2>
+
+        <p>
+          <strong>${opportunity.title}</strong>
+        </p>
+
+        <p>
+          <strong>BENIA SCORE:</strong>
+          ${opportunity.score}/100
+        </p>
+
+        <p>
+          <strong>Recompensa:</strong>
+          ${opportunity.reward}
+        </p>
+
+        <p>
+          ${opportunity.description}
+        </p>
+
+        <hr />
+
+        <p>
+          <strong>Motivo del score:</strong><br>
+          ${opportunity.reason}
+        </p>
+
+        <p>
+          <strong>Fuente:</strong>
+          <a href="${opportunity.source_url}">
+            ${opportunity.source_name}
+          </a>
+        </p>
+
+        <h3>Condiciones verificadas</h3>
+
+        <ul>
+          ${(opportunity.verification_notes ?? [])
+            .map(
+              (note: string) =>
+                `<li>${note}</li>`
+            )
+            .join("")}
+        </ul>
+
+        <hr />
+
+        <p>
+          Esta oportunidad está actualmente
+          <strong>PENDIENTE</strong>.
+        </p>
+
+        <p>
+          Todavía NO se ha publicado en BENIA.
+        </p>
+
+        <p>
+          Añade tu referral cuando lo tengas.
+        </p>
+
+        <p>
+          <a href="${opportunity.source_url}">
+            🔎 Ver fuente oficial
+          </a>
+        </p>
+
+      </div>
+    `;
+
+    const resendResponse = await fetch(
+      "https://api.resend.com/emails",
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${resendKey}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          from:
+            "BENIA Scout <onboarding@resend.dev>",
+          to: ["delivered@resend.dev"],
+          subject:
+            `🚨 BENIA Scout: ${opportunity.brand} — Score ${opportunity.score}`,
+          html: emailHtml,
+        }),
+      }
+    );
+
+    const resendData =
+      await resendResponse.json();
+
+    if (!resendResponse.ok) {
+      console.error(resendData);
+
+      return NextResponse.json({
+        success: true,
+        saved: true,
+        emailed: false,
+        scout: savedOpportunity,
+        email_error: resendData,
+        message:
+          "Oportunidad guardada, pero el email no pudo enviarse.",
+      });
     }
 
     return NextResponse.json({
       success: true,
-      scout: analysis,
-      searched_web: true,
-      message: opportunity
-        ? "BENIA Scout ha encontrado y analizado una oportunidad web."
-        : "BENIA Scout no ha encontrado una oportunidad suficientemente verificable.",
+      saved: true,
+      emailed: true,
+      scout: savedOpportunity,
+      email: resendData,
+      message:
+        "BENIA Scout encontró, guardó y notificó una nueva oportunidad.",
     });
   } catch (error) {
     console.error(error);
