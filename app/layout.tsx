@@ -12,25 +12,24 @@ export const metadata: Metadata = {
   },
 
   description:
-    "Discover verified referral, fintech, banking, crypto, cashback, business and app opportunities in Spain and Europe.",
+    "Descubre oportunidades verificadas de referidos, fintech, banca, crypto, cashback, apps y servicios en España y Europa.",
 
   keywords: [
-    "referral programs Spain",
     "referidos España",
-    "referral bonuses",
-    "fintech referrals",
-    "bank referrals",
-    "crypto referrals",
-    "cashback Spain",
-    "business referrals",
-    "app promotions",
-    "verified opportunities",
-    "fintech Spain",
-    "crypto Europe",
+    "programas de referidos",
+    "bonos por referidos",
+    "ofertas fintech",
+    "referidos bancos",
+    "referidos crypto",
+    "cashback España",
+    "referidos empresas",
+    "promociones apps",
+    "oportunidades verificadas",
+    "fintech España",
+    "crypto Europa",
   ],
 
   applicationName: "BENIA",
-
   authors: [{ name: "BENIA" }],
   creator: "BENIA",
   publisher: "BENIA",
@@ -51,21 +50,25 @@ export const metadata: Metadata = {
     },
   },
 
+  verification: {
+    google: "IIL8xKXHCF_OA0ZwPT66LW2QQlXQzEATpE4VbZfX1fU",
+  },
+
   openGraph: {
     type: "website",
-    locale: "en_US",
+    locale: "es_ES",
     url: siteUrl,
     siteName: "BENIA",
-    title: "BENIA — Verified Opportunities",
+    title: "BENIA — Oportunidades verificadas",
     description:
-      "Discover verified referral, fintech, banking, crypto, cashback, business and app opportunities in Spain and Europe.",
+      "Descubre oportunidades verificadas de referidos, fintech, banca, crypto, cashback, apps y servicios en España y Europa.",
   },
 
   twitter: {
     card: "summary_large_image",
-    title: "BENIA — Verified Opportunities",
+    title: "BENIA — Oportunidades verificadas",
     description:
-      "Discover verified referral, fintech, banking, crypto, cashback, business and app opportunities in Spain and Europe.",
+      "Descubre oportunidades verificadas de referidos, fintech, banca, crypto, cashback, apps y servicios en España y Europa.",
   },
 
   icons: {
@@ -79,7 +82,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="es">
       <body>{children}</body>
     </html>
   );
