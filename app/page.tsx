@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 import OfferCard from "@/components/OfferCard";
 
@@ -129,11 +130,16 @@ export default function Home() {
   return (
     <main>
       {/* NAVBAR */}
+
       <header className="topbar">
-        <a className="brand" href="/" aria-label="BENIA inicio">
+        <Link
+          className="brand"
+          href="/"
+          aria-label="BENIA inicio"
+        >
           <span className="brand-mark">B</span>
           <span>benia</span>
-        </a>
+        </Link>
 
         <div className="live-pill">
           <span className="live-dot" />
@@ -141,17 +147,38 @@ export default function Home() {
         </div>
 
         <nav>
-          <a href="#ofertas">Ofertas</a>
-          <a href="#como-funciona">Cómo funciona</a>
+          <Link href="/opportunities">
+            Oportunidades
+          </Link>
+
+          <a href="#ofertas">
+            Ofertas
+          </a>
+
+          <a href="#como-funciona">
+            Cómo funciona
+          </a>
         </nav>
       </header>
 
       {/* HERO */}
+
       <section className="hero">
-        <div className="floating-tag tag-one">+15 €</div>
-        <div className="floating-tag tag-two">₿ Bonus</div>
-        <div className="floating-tag tag-three">Cashback</div>
-        <div className="floating-tag tag-four">0 € fees</div>
+        <div className="floating-tag tag-one">
+          +15 €
+        </div>
+
+        <div className="floating-tag tag-two">
+          ₿ Bonus
+        </div>
+
+        <div className="floating-tag tag-three">
+          Cashback
+        </div>
+
+        <div className="floating-tag tag-four">
+          0 € fees
+        </div>
 
         <div className="hero-glow" />
 
@@ -168,18 +195,31 @@ export default function Home() {
         </h1>
 
         <p>
-          Finanzas, crypto, apps y ofertas seleccionadas para que encuentres
-          oportunidades sin perder tiempo.
+          Finanzas, crypto, apps y ofertas seleccionadas para que
+          encuentres oportunidades sin perder tiempo.
         </p>
 
         <div className="hero-actions">
-          <a className="hero-cta" href="#ofertas">
-            Explorar oportunidades <span>↓</span>
+          <a
+            className="hero-cta"
+            href="#ofertas"
+          >
+            Explorar oportunidades
+            <span>↓</span>
           </a>
+
+          <Link
+            className="interest-button"
+            href="/opportunities"
+          >
+            Ver todas las oportunidades →
+          </Link>
 
           <button
             className="interest-button"
-            onClick={() => setInterestOpen(!interestOpen)}
+            onClick={() =>
+              setInterestOpen(!interestOpen)
+            }
           >
             ✨ ¿Qué me interesa?
           </button>
@@ -189,9 +229,15 @@ export default function Home() {
           <div className="interest-panel">
             <div className="interest-title">
               <span>✨</span>
+
               <div>
-                <strong>Personaliza tu feed</strong>
-                <small>Elige lo que quieres descubrir</small>
+                <strong>
+                  Personaliza tu feed
+                </strong>
+
+                <small>
+                  Elige lo que quieres descubrir
+                </small>
               </div>
             </div>
 
@@ -211,15 +257,23 @@ export default function Home() {
                               ? "Apps"
                               : "Todas";
 
-                    setActive(category as Category);
+                    setActive(
+                      category as Category
+                    );
+
                     setInterestOpen(false);
 
                     document
                       .getElementById("ofertas")
-                      ?.scrollIntoView({ behavior: "smooth" });
+                      ?.scrollIntoView({
+                        behavior: "smooth",
+                      });
                   }}
                 >
-                  <span>{item.icon}</span>
+                  <span>
+                    {item.icon}
+                  </span>
+
                   {item.label}
                 </button>
               ))}
@@ -229,11 +283,17 @@ export default function Home() {
       </section>
 
       {/* LIVE STATS */}
+
       <section className="live-section">
         <div className="live-header">
           <div>
-            <div className="eyebrow">BENIA LIVE</div>
-            <h2>Lo que está pasando ahora</h2>
+            <div className="eyebrow">
+              BENIA LIVE
+            </div>
+
+            <h2>
+              Lo que está pasando ahora
+            </h2>
           </div>
 
           <div className="live-status">
@@ -244,34 +304,70 @@ export default function Home() {
 
         <div className="stats-grid">
           <div className="stat-card">
-            <span className="stat-icon">🔥</span>
-            <strong>{offers.length}</strong>
-            <small>ofertas activas</small>
-          </div>
+            <span className="stat-icon">
+              🔥
+            </span>
 
-          <div className="stat-card">
-            <span className="stat-icon">✦</span>
-            <strong>{Math.min(offers.length, 3)}</strong>
-            <small>nuevas oportunidades</small>
-          </div>
-
-          <div className="stat-card">
-            <span className="stat-icon">⏳</span>
             <strong>
-              {offers.filter((offer) => offer.expires_at).length}
+              {offers.length}
             </strong>
-            <small>terminan pronto</small>
+
+            <small>
+              ofertas activas
+            </small>
           </div>
 
           <div className="stat-card">
-            <span className="stat-icon">✓</span>
-            <strong>24/7</strong>
-            <small>selección BENIA</small>
+            <span className="stat-icon">
+              ✦
+            </span>
+
+            <strong>
+              {Math.min(offers.length, 3)}
+            </strong>
+
+            <small>
+              nuevas oportunidades
+            </small>
+          </div>
+
+          <div className="stat-card">
+            <span className="stat-icon">
+              ⏳
+            </span>
+
+            <strong>
+              {
+                offers.filter(
+                  (offer) =>
+                    offer.expires_at
+                ).length
+              }
+            </strong>
+
+            <small>
+              terminan pronto
+            </small>
+          </div>
+
+          <div className="stat-card">
+            <span className="stat-icon">
+              ✓
+            </span>
+
+            <strong>
+              24/7
+            </strong>
+
+            <small>
+              selección BENIA
+            </small>
           </div>
         </div>
       </section>
 
       {/* FEATURED */}
+
       {featured && (
         <section className="featured-section">
           <div className="featured-card">
@@ -283,55 +379,162 @@ export default function Home() {
               </div>
 
               <div className="featured-brand">
-                <div className="featured-icon">{featured.icon}</div>
+                <div className="featured-icon">
+                  {featured.icon}
+                </div>
 
                 <div>
-                  <span>{featured.category}</span>
-                  <h2>{featured.brand}</h2>
+                  <span>
+                    {featured.category}
+                  </span>
+
+                  <h2>
+                    {featured.brand}
+                  </h2>
                 </div>
               </div>
 
-              <div className="featured-reward">{featured.reward}</div>
+              <div className="featured-reward">
+                {featured.reward}
+              </div>
 
-              <p>{featured.description}</p>
+              <p>
+                {featured.description}
+              </p>
 
-              <a
-                href={featured.referral_url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="featured-cta"
+              <div
+                style={{
+                  display: "flex",
+                  flexWrap: "wrap",
+                  gap: "10px",
+                  marginTop: "10px",
+                }}
               >
-                CONSEGUIR OFERTA
-                <span>↗</span>
-              </a>
+                <Link
+                  href={`/opportunities/${featured.brand
+                    .toLowerCase()
+                    .normalize("NFD")
+                    .replace(
+                      /[\u0300-\u036f]/g,
+                      ""
+                    )
+                    .replace(
+                      /[^a-z0-9]+/g,
+                      "-"
+                    )
+                    .replace(
+                      /^-+|-+$/g,
+                      ""
+                    )}`}
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "20px",
+                    background: "#ffffff",
+                    color: "#10151c",
+                    padding: "15px 18px",
+                    borderRadius: "13px",
+                    fontSize: "10px",
+                    fontWeight: 900,
+                    letterSpacing: "0.7px",
+                    textDecoration: "none",
+                  }}
+                >
+                  VER OPORTUNIDAD
+                  <span
+                    style={{
+                      color: "#1cae8c",
+                      fontSize: "17px",
+                    }}
+                  >
+                    →
+                  </span>
+                </Link>
+
+                <a
+                  href={
+                    featured.referral_url
+                  }
+                  target="_blank"
+                  rel="noopener noreferrer nofollow"
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "20px",
+                    background: "#ffffff",
+                    color: "#10151c",
+                    padding: "15px 18px",
+                    borderRadius: "13px",
+                    fontSize: "10px",
+                    fontWeight: 900,
+                    letterSpacing: "0.7px",
+                    textDecoration: "none",
+                  }}
+                >
+                  CONSEGUIR OFERTA
+                  <span
+                    style={{
+                      color: "#1cae8c",
+                      fontSize: "17px",
+                    }}
+                  >
+                    ↗
+                  </span>
+                </a>
+              </div>
             </div>
 
             <div className="score-box">
-              <small>BENIA SCORE</small>
-              <strong>{featured.score ?? 0}</strong>
-              <span>/100</span>
+              <small>
+                BENIA SCORE
+              </small>
+
+              <strong>
+                {featured.score ?? 0}
+              </strong>
+
+              <span>
+                /100
+              </span>
             </div>
           </div>
         </section>
       )}
 
       {/* OFFERS */}
-      <section id="ofertas" className="offers-section">
+
+      <section
+        id="ofertas"
+        className="offers-section"
+      >
         <div className="section-heading">
           <div>
-            <div className="eyebrow">BENIA PICKS</div>
-            <h2>Oportunidades para ti</h2>
+            <div className="eyebrow">
+              BENIA PICKS
+            </div>
+
+            <h2>
+              Oportunidades para ti
+            </h2>
           </div>
 
-          <span className="count">{filtered.length} ofertas</span>
+          <span className="count">
+            {filtered.length} ofertas
+          </span>
         </div>
 
         <div className="categories">
           {categories.map((category) => (
             <button
               key={category}
-              className={active === category ? "chip active" : "chip"}
-              onClick={() => setActive(category)}
+              className={
+                active === category
+                  ? "chip active"
+                  : "chip"
+              }
+              onClick={() =>
+                setActive(category)
+              }
             >
               {category}
             </button>
@@ -339,40 +542,104 @@ export default function Home() {
         </div>
 
         <div className="offer-grid">
-          {filtered.map((offer, index) => (
-            <div
-              key={offer.id}
-              className="offer-wrapper"
-              style={{ animationDelay: `${index * 70}ms` }}
+          {filtered.map(
+            (offer, index) => (
+              <div
+                key={offer.id}
+                className="offer-wrapper"
+                style={{
+                  animationDelay:
+                    `${index * 70}ms`,
+                }}
+              >
+                <OfferCard
+                  offer={offer}
+                />
+              </div>
+            )
+          )}
+        </div>
+
+        {/* SEO INTERNAL LINK */}
+
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "center",
+            marginTop: "40px",
+          }}
+        >
+          <Link
+            href="/opportunities"
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "12px",
+              padding: "15px 22px",
+              borderRadius: "999px",
+              background: "#10151c",
+              color: "#ffffff",
+              textDecoration: "none",
+              fontSize: "12px",
+              fontWeight: 900,
+              letterSpacing: "0.5px",
+            }}
+          >
+            VER TODAS LAS OPORTUNIDADES
+            <span
+              style={{
+                color: "#73f0c4",
+                fontSize: "17px",
+              }}
             >
-              <OfferCard offer={offer} />
-            </div>
-          ))}
+              →
+            </span>
+          </Link>
         </div>
       </section>
 
       {/* ENDING SOON */}
+
       {endingSoon && (
         <section className="ending-section">
-          <div className="eyebrow">⏳ NO LO DEJES PARA MAÑANA</div>
+          <div className="eyebrow">
+            ⏳ NO LO DEJES PARA MAÑANA
+          </div>
 
           <div className="ending-heading">
-            <h2>Terminan pronto</h2>
-            <span>Ofertas con fecha límite</span>
+            <h2>
+              Terminan pronto
+            </h2>
+
+            <span>
+              Ofertas con fecha límite
+            </span>
           </div>
 
           <div className="ending-card">
-            <div className="ending-icon">{endingSoon.icon}</div>
+            <div className="ending-icon">
+              {endingSoon.icon}
+            </div>
 
             <div className="ending-info">
-              <strong>{endingSoon.brand}</strong>
-              <span>{endingSoon.title}</span>
+              <strong>
+                {endingSoon.brand}
+              </strong>
+
+              <span>
+                {endingSoon.title}
+              </span>
             </div>
 
             <div className="ending-time">
-              <small>FINALIZA</small>
+              <small>
+                FINALIZA
+              </small>
+
               <strong>
-                {new Date(endingSoon.expires_at!).toLocaleDateString(
+                {new Date(
+                  endingSoon.expires_at!
+                ).toLocaleDateString(
                   "es-ES",
                   {
                     day: "2-digit",
@@ -383,9 +650,11 @@ export default function Home() {
             </div>
 
             <a
-              href={endingSoon.referral_url}
+              href={
+                endingSoon.referral_url
+              }
               target="_blank"
-              rel="noopener noreferrer"
+              rel="noopener noreferrer nofollow"
             >
               Ver oferta ↗
             </a>
@@ -394,59 +663,97 @@ export default function Home() {
       )}
 
       {/* HOW IT WORKS */}
-      <section id="como-funciona" className="how">
-        <div className="eyebrow">SIMPLE POR DISEÑO</div>
+
+      <section
+        id="como-funciona"
+        className="how"
+      >
+        <div className="eyebrow">
+          SIMPLE POR DISEÑO
+        </div>
 
         <h2>
           Menos buscar.
           <br />
-          <span>Más encontrar.</span>
+          <span>
+            Más encontrar.
+          </span>
         </h2>
 
         <div className="steps">
           <div>
             <b>01</b>
-            <strong>Descubre</strong>
+
+            <strong>
+              Descubre
+            </strong>
+
             <p>
-              Explora oportunidades seleccionadas y encuentra las que
-              realmente te interesan.
+              Explora oportunidades
+              seleccionadas y encuentra
+              las que realmente te
+              interesan.
             </p>
           </div>
 
           <div>
             <b>02</b>
-            <strong>Regístrate</strong>
+
+            <strong>
+              Regístrate
+            </strong>
+
             <p>
-              Entra directamente desde BENIA y sigue los requisitos de cada
-              oferta.
+              Entra directamente desde
+              BENIA y sigue los requisitos
+              de cada oferta.
             </p>
           </div>
 
           <div>
             <b>03</b>
-            <strong>Benefíciate</strong>
+
+            <strong>
+              Benefíciate
+            </strong>
+
             <p>
-              Completa las condiciones y recibe la recompensa del proveedor.
+              Completa las condiciones y
+              recibe la recompensa del
+              proveedor.
             </p>
           </div>
         </div>
       </section>
 
       {/* FOOTER */}
+
       <footer>
         <div className="brand footer-brand">
-          <span className="brand-mark">B</span>
-          <span>benia</span>
+          <span className="brand-mark">
+            B
+          </span>
+
+          <span>
+            benia
+          </span>
         </div>
 
         <p>
-          BENIA es una plataforma informativa y de referencias. No es un
-          banco, broker ni asesor financiero. Las condiciones de las ofertas
-          pueden cambiar; comprueba siempre los términos del proveedor.
+          BENIA es una plataforma
+          informativa y de referencias.
+          No es un banco, broker ni
+          asesor financiero. Las
+          condiciones de las ofertas
+          pueden cambiar; comprueba
+          siempre los términos del
+          proveedor.
         </p>
 
-        <span>© 2026 BENIA</span>
+        <span>
+          © 2026 BENIA
+        </span>
       </footer>
     </main>
   );
-              }
+}
