@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 
@@ -62,7 +63,7 @@ export async function generateMetadata({
 
   if (!offer) {
     return {
-      title: "Opportunity not found",
+      title: "Oportunidad no encontrada",
       robots: {
         index: false,
         follow: false,
@@ -70,10 +71,11 @@ export async function generateMetadata({
     };
   }
 
-  const title = `${offer.brand} Referral Offer in Spain`;
+  const title = `${offer.brand}: oferta de referido en España`;
+
   const description =
     `${offer.brand}: ${offer.reward}. ` +
-    `${offer.description} Discover the current conditions and referral opportunity on BENIA.`;
+    `${offer.description} Consulta las condiciones y la información actualizada de esta oportunidad en BENIA.`;
 
   return {
     title,
@@ -101,7 +103,7 @@ export async function generateMetadata({
       siteName: "BENIA",
       title,
       description,
-      locale: "en_US",
+      locale: "es_ES",
     },
 
     twitter: {
@@ -121,7 +123,7 @@ function formatDate(date: string | null) {
     return date;
   }
 
-  return new Intl.DateTimeFormat("en-GB", {
+  return new Intl.DateTimeFormat("es-ES", {
     day: "2-digit",
     month: "long",
     year: "numeric",
@@ -153,8 +155,11 @@ function getConditions(conditions: unknown): string[] {
     .filter((condition): condition is string => Boolean(condition));
 }
 
-export default async function OpportunityPage({ params }: PageProps) {
+export default async function OpportunityPage({
+  params,
+}: PageProps) {
   const { slug } = await params;
+
   const offer = await getOffer(slug);
 
   if (!offer) {
@@ -170,17 +175,43 @@ export default async function OpportunityPage({ params }: PageProps) {
   const jsonLd = {
     "@context": "https://schema.org",
     "@type": "WebPage",
-    name: `${offer.brand} Referral Offer`,
+    name: `${offer.brand}: oferta de referido`,
     url: pageUrl,
     description: offer.description,
+
     isPartOf: {
       "@type": "WebSite",
       name: "BENIA",
       url: siteUrl,
     },
+
     about: {
       "@type": "Thing",
       name: offer.brand,
+    },
+
+    breadcrumb: {
+      "@type": "BreadcrumbList",
+      itemListElement: [
+        {
+          "@type": "ListItem",
+          position: 1,
+          name: "BENIA",
+          item: siteUrl,
+        },
+        {
+          "@type": "ListItem",
+          position: 2,
+          name: "Oportunidades",
+          item: `${siteUrl}/#offers`,
+        },
+        {
+          "@type": "ListItem",
+          position: 3,
+          name: offer.brand,
+          item: pageUrl,
+        },
+      ],
     },
   };
 
@@ -194,17 +225,19 @@ export default async function OpportunityPage({ params }: PageProps) {
       />
 
       <div className="mx-auto max-w-4xl px-6 py-10">
+        {/* BREADCRUMB */}
+
         <nav className="mb-8 text-sm text-slate-500">
-          <a
+          <Link
             href="/"
             className="transition hover:text-slate-900"
           >
             BENIA
-          </a>
+          </Link>
 
           <span className="mx-2">/</span>
 
-          <span>Opportunities</span>
+          <span>Oportunidades</span>
 
           <span className="mx-2">/</span>
 
@@ -214,10 +247,12 @@ export default async function OpportunityPage({ params }: PageProps) {
         </nav>
 
         <article>
+          {/* HEADER */}
+
           <header className="border-b border-slate-200 pb-8">
             <div className="mb-5 flex items-center gap-4">
               {offer.icon && (
-                <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-slate-100 text-3xl">
+                <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-slate-100 text-3xl">
                   {offer.icon}
                 </div>
               )}
@@ -228,7 +263,7 @@ export default async function OpportunityPage({ params }: PageProps) {
                 </p>
 
                 <h1 className="mt-1 text-3xl font-bold tracking-tight sm:text-4xl">
-                  {offer.brand} Referral Offer
+                  {offer.brand}: oferta de referido
                 </h1>
               </div>
             </div>
@@ -240,7 +275,13 @@ export default async function OpportunityPage({ params }: PageProps) {
             <div className="mt-6 flex flex-wrap gap-3">
               {offer.verified && (
                 <span className="rounded-full bg-green-100 px-3 py-1 text-sm font-medium text-green-800">
-                  ✓ Verified
+                  ✓ Verificado
+                </span>
+              )}
+
+              {!offer.verified && (
+                <span className="rounded-full bg-amber-100 px-3 py-1 text-sm font-medium text-amber-800">
+                  ● Revisar
                 </span>
               )}
 
@@ -256,40 +297,50 @@ export default async function OpportunityPage({ params }: PageProps) {
             </div>
           </header>
 
+          {/* REWARD */}
+
           <section className="py-8">
             <div className="rounded-3xl border border-slate-200 bg-slate-50 p-6 sm:p-8">
               <p className="text-sm font-medium uppercase tracking-wide text-slate-500">
-                Current reward
+                Recompensa actual
               </p>
 
-              <p className="mt-2 text-4xl font-bold tracking-tight">
+              <p className="mt-2 text-4xl font-bold tracking-tight text-slate-900 sm:text-5xl">
                 {offer.reward}
               </p>
 
               <p className="mt-4 text-slate-600">
-                Check the current terms before registering. Referral
-                rewards and eligibility requirements can change.
+                Consulta las condiciones actuales antes de registrarte.
+                Las recompensas y los requisitos de elegibilidad pueden
+                cambiar.
               </p>
 
               <a
                 href={offer.referral_url}
                 target="_blank"
                 rel="noopener noreferrer nofollow"
-                className="mt-6 inline-flex w-full items-center justify-center rounded-xl bg-slate-900 px-6 py-4 text-base font-semibold text-white transition hover:bg-slate-700 sm:w-auto"
+                className="!mt-6 !inline-flex !w-full !items-center !justify-center !rounded-xl !bg-slate-900 !px-6 !py-4 !text-base !font-semibold !text-white !no-underline !transition hover:!bg-slate-700 sm:!w-auto"
               >
-                View offer
-                <span className="ml-2">↗</span>
+                <span className="!text-white">
+                  CONSEGUIR OFERTA
+                </span>
+
+                <span className="!ml-2 !text-white">
+                  ↗
+                </span>
               </a>
             </div>
           </section>
 
+          {/* CONDITIONS */}
+
           {conditions.length > 0 && (
             <section className="border-t border-slate-200 py-8">
               <h2 className="text-2xl font-bold">
-                Conditions
+                Condiciones
               </h2>
 
-              <ul className="mt-5 space-y-3">
+              <ul className="mt-5 space-y-4">
                 {conditions.map((condition, index) => (
                   <li
                     key={`${condition}-${index}`}
@@ -306,15 +357,17 @@ export default async function OpportunityPage({ params }: PageProps) {
             </section>
           )}
 
+          {/* INFORMATION */}
+
           <section className="border-t border-slate-200 py-8">
             <h2 className="text-2xl font-bold">
-              Offer information
+              Información de la oferta
             </h2>
 
             <dl className="mt-5 divide-y divide-slate-200 rounded-2xl border border-slate-200">
               <div className="flex flex-col gap-1 px-5 py-4 sm:flex-row sm:justify-between">
                 <dt className="font-medium text-slate-500">
-                  Brand
+                  Marca
                 </dt>
 
                 <dd className="font-semibold">
@@ -324,7 +377,7 @@ export default async function OpportunityPage({ params }: PageProps) {
 
               <div className="flex flex-col gap-1 px-5 py-4 sm:flex-row sm:justify-between">
                 <dt className="font-medium text-slate-500">
-                  Category
+                  Categoría
                 </dt>
 
                 <dd className="font-semibold">
@@ -334,7 +387,7 @@ export default async function OpportunityPage({ params }: PageProps) {
 
               <div className="flex flex-col gap-1 px-5 py-4 sm:flex-row sm:justify-between">
                 <dt className="font-medium text-slate-500">
-                  Reward
+                  Recompensa
                 </dt>
 
                 <dd className="font-semibold">
@@ -345,7 +398,7 @@ export default async function OpportunityPage({ params }: PageProps) {
               {expiryDate && (
                 <div className="flex flex-col gap-1 px-5 py-4 sm:flex-row sm:justify-between">
                   <dt className="font-medium text-slate-500">
-                    Offer expiry
+                    Fecha de finalización
                   </dt>
 
                   <dd className="font-semibold">
@@ -357,7 +410,7 @@ export default async function OpportunityPage({ params }: PageProps) {
               {updatedDate && (
                 <div className="flex flex-col gap-1 px-5 py-4 sm:flex-row sm:justify-between">
                   <dt className="font-medium text-slate-500">
-                    Last updated
+                    Última actualización
                   </dt>
 
                   <dd className="font-semibold">
@@ -369,7 +422,7 @@ export default async function OpportunityPage({ params }: PageProps) {
               {offer.source_type && (
                 <div className="flex flex-col gap-1 px-5 py-4 sm:flex-row sm:justify-between">
                   <dt className="font-medium text-slate-500">
-                    Source
+                    Fuente
                   </dt>
 
                   <dd className="font-semibold">
@@ -380,33 +433,42 @@ export default async function OpportunityPage({ params }: PageProps) {
             </dl>
           </section>
 
+          {/* BENIA METHODOLOGY */}
+
           <section className="border-t border-slate-200 py-8">
             <h2 className="text-2xl font-bold">
-              About this BENIA listing
+              Sobre esta oportunidad en BENIA
             </h2>
 
             <p className="mt-4 leading-7 text-slate-600">
-              BENIA collects referral and promotional opportunities
-              and presents their key conditions in a structured format.
-              Information can change over time, so users should review
-              the provider&apos;s current terms before completing a
-              registration.
+              BENIA recopila oportunidades de referidos y promociones
+              y presenta sus principales condiciones en un formato
+              estructurado para facilitar su consulta.
             </p>
 
             <p className="mt-4 leading-7 text-slate-600">
-              Some links on BENIA may be referral links. BENIA may
-              receive compensation when a user completes qualifying
-              actions through a referral link, where applicable.
+              La información de las promociones puede cambiar con el
+              tiempo. Antes de registrarte, revisa siempre las
+              condiciones vigentes del proveedor.
+            </p>
+
+            <p className="mt-4 leading-7 text-slate-600">
+              Algunos enlaces de BENIA pueden ser enlaces de referido.
+              Cuando corresponda, BENIA puede recibir una compensación
+              si un usuario completa las acciones necesarias a través
+              de uno de estos enlaces.
             </p>
           </section>
 
+          {/* BACK */}
+
           <footer className="border-t border-slate-200 pt-8">
-            <a
+            <Link
               href="/"
               className="font-semibold text-slate-900 hover:underline"
             >
-              ← Back to all opportunities
-            </a>
+              ← Volver a todas las oportunidades
+            </Link>
           </footer>
         </article>
       </div>
