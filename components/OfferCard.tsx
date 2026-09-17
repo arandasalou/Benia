@@ -23,34 +23,57 @@ function slugify(value: string) {
     .replace(/^-+|-+$/g, "");
 }
 
-export default function OfferCard({ offer }: { offer: Offer }) {
+export default function OfferCard({
+  offer,
+}: {
+  offer: Offer;
+}) {
   const score = offer.score ?? 0;
   const slug = slugify(offer.brand);
 
   return (
     <article className="offer-card">
       <div className="card-top">
-        <div className="service-icon">{offer.icon}</div>
+        <div className="service-icon">
+          {offer.icon}
+        </div>
 
-        <div className={offer.verified ? "verify" : "verify pending"}>
-          {offer.verified ? "✓ Verificado" : "● Revisar"}
+        <div
+          className={
+            offer.verified
+              ? "verify"
+              : "verify pending"
+          }
+        >
+          {offer.verified
+            ? "✓ Verificado"
+            : "● Revisar"}
         </div>
       </div>
 
-      <div className="category-label">{offer.category}</div>
+      <div className="category-label">
+        {offer.category}
+      </div>
 
       <h3>
         <Link
           href={`/opportunities/${slug}`}
-          className="hover:underline"
+          style={{
+            color: "#10151c",
+            textDecoration: "none",
+          }}
         >
           {offer.brand}
         </Link>
       </h3>
 
-      <div className="reward">{offer.reward}</div>
+      <div className="reward">
+        {offer.reward}
+      </div>
 
-      <p>{offer.description}</p>
+      <p>
+        {offer.description}
+      </p>
 
       <div className="score-row">
         <span>BENIA SCORE</span>
@@ -59,7 +82,9 @@ export default function OfferCard({ offer }: { offer: Offer }) {
           <div className="score-bar">
             <div
               className="score-fill"
-              style={{ width: `${score}%` }}
+              style={{
+                width: `${score}%`,
+              }}
             />
           </div>
 
@@ -68,32 +93,100 @@ export default function OfferCard({ offer }: { offer: Offer }) {
       </div>
 
       <details>
-        <summary>Ver condiciones</summary>
+        <summary>
+          Ver condiciones
+        </summary>
 
         <ul>
-          {(offer.conditions ?? []).map((condition, index) => (
-            <li key={index}>{condition}</li>
-          ))}
+          {(offer.conditions ?? []).map(
+            (condition, index) => (
+              <li key={index}>
+                {condition}
+              </li>
+            )
+          )}
         </ul>
       </details>
 
-      <div className="offer-actions">
+      <div
+        className="offer-actions"
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          gap: "10px",
+          marginTop: "18px",
+        }}
+      >
         <Link
-          className="offer-details"
           href={`/opportunities/${slug}`}
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            width: "100%",
+            background: "#10151c",
+            color: "#ffffff",
+            padding: "14px 16px",
+            borderRadius: "13px",
+            fontSize: "10px",
+            fontWeight: 900,
+            letterSpacing: "0.7px",
+            textDecoration: "none",
+          }}
         >
-          <span>VER DETALLES</span>
-          <span className="cta-arrow">→</span>
+          <span
+            style={{
+              color: "#ffffff",
+            }}
+          >
+            VER DETALLES
+          </span>
+
+          <span
+            style={{
+              color: "#73f0c4",
+              fontSize: "16px",
+            }}
+          >
+            →
+          </span>
         </Link>
 
         <a
-          className="offer-cta"
           href={offer.referral_url}
           target="_blank"
           rel="noopener noreferrer nofollow"
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            width: "100%",
+            background: "#10151c",
+            color: "#ffffff",
+            padding: "14px 16px",
+            borderRadius: "13px",
+            fontSize: "10px",
+            fontWeight: 900,
+            letterSpacing: "0.7px",
+            textDecoration: "none",
+          }}
         >
-          <span>CONSEGUIR OFERTA</span>
-          <span className="cta-arrow">↗</span>
+          <span
+            style={{
+              color: "#ffffff",
+            }}
+          >
+            CONSEGUIR OFERTA
+          </span>
+
+          <span
+            style={{
+              color: "#73f0c4",
+              fontSize: "16px",
+            }}
+          >
+            ↗
+          </span>
         </a>
       </div>
     </article>
