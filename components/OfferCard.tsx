@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 type Offer = {
   id: number;
   brand: string;
@@ -12,8 +14,18 @@ type Offer = {
   score: number | null;
 };
 
+function slugify(value: string) {
+  return value
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
 export default function OfferCard({ offer }: { offer: Offer }) {
   const score = offer.score ?? 0;
+  const slug = slugify(offer.brand);
 
   return (
     <article className="offer-card">
@@ -27,7 +39,14 @@ export default function OfferCard({ offer }: { offer: Offer }) {
 
       <div className="category-label">{offer.category}</div>
 
-      <h3>{offer.brand}</h3>
+      <h3>
+        <Link
+          href={`/opportunities/${slug}`}
+          className="hover:underline"
+        >
+          {offer.brand}
+        </Link>
+      </h3>
 
       <div className="reward">{offer.reward}</div>
 
@@ -58,15 +77,25 @@ export default function OfferCard({ offer }: { offer: Offer }) {
         </ul>
       </details>
 
-      <a
-        className="offer-cta"
-        href={offer.referral_url}
-        target="_blank"
-        rel="noopener noreferrer"
-      >
-        <span>CONSEGUIR OFERTA</span>
-        <span className="cta-arrow">↗</span>
-      </a>
+      <div className="offer-actions">
+        <Link
+          className="offer-details"
+          href={`/opportunities/${slug}`}
+        >
+          <span>VER DETALLES</span>
+          <span className="cta-arrow">→</span>
+        </Link>
+
+        <a
+          className="offer-cta"
+          href={offer.referral_url}
+          target="_blank"
+          rel="noopener noreferrer nofollow"
+        >
+          <span>CONSEGUIR OFERTA</span>
+          <span className="cta-arrow">↗</span>
+        </a>
+      </div>
     </article>
   );
 }
