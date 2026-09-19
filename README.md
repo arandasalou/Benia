@@ -1,53 +1,39 @@
-# BENIA MVP
+# BENIA — Enhanced
 
-**Descubre. Regístrate. Benefíciate.**
+BENIA is a Spanish-first directory for referral programs, fintech, banking, crypto, cashback, apps and Business opportunities.
 
-BENIA es una plataforma mobile-first para descubrir apps, servicios financieros, crypto, herramientas business y promociones.
+## What was improved
 
-## Stack
+- Homepage is now a **Server Component**: active offers are present in the initial HTML for crawlers and AI systems.
+- Client-side filtering remains fast and interactive through `HomeClient`.
+- Stable dynamic sitemap includes `/opportunities` plus active opportunity pages.
+- Spanish metadata, canonical URLs, robots directives and Google Search Console verification are included.
+- Individual opportunity pages have their own metadata, canonical URL and JSON-LD breadcrumbs.
+- Referral links use `nofollow` and open safely in a new tab.
+- No fake ratings/reviews are generated from BENIA Score.
+- Cleaner responsive UI with a stronger white / mint / electric-blue visual system.
+- Scout endpoint is protected by `SCOUT_SECRET` when configured, stores discoveries as **pending**, and only emails when `SCOUT_TO_EMAIL` is configured.
+- Scout never publishes opportunities automatically.
 
-- Next.js + TypeScript
-- Tailwind CSS
-- Vercel-ready
-- Supabase-ready (el MVP funciona sin Supabase)
+## Supabase
 
-## Ejecutar localmente
+The existing `offers` table is expected to contain: `id, brand, category, icon, title, reward, description, referral_url, conditions, verified, source_type, score, expires_at, active, created_at, updated_at`.
 
-Requiere Node.js 20+.
+Public access should remain limited to active offers through RLS. The service key is used only by the server-side Scout route.
 
-```bash
-npm install
-npm run dev
-```
+## Environment variables
 
-Abre http://localhost:3000
+Use `.env.example` as the template. Never expose `SUPABASE_SECRET_KEY`, `OPENROUTER_API_KEY` or `RESEND_API_KEY` to the client.
 
-## Subir a GitHub
+## Deployment
 
-1. Crea/abre el repositorio `arandasalou/Benia`.
-2. Sube **el contenido de esta carpeta**, no la carpeta contenedora.
-3. Haz commit a `main`.
-
-## Desplegar en Vercel
-
-1. Importa el repositorio desde Vercel.
-2. Framework: Next.js (detección automática).
-3. No necesitas variables de entorno para esta primera versión.
+1. Push the repo to GitHub.
+2. Import into Vercel.
+3. Add the Supabase public variables.
 4. Deploy.
+5. Confirm `/robots.txt` and `/sitemap.xml` work.
+6. Keep the verified property in Google Search Console and submit `/sitemap.xml`.
 
-## Próxima fase
+## Editorial rule
 
-- Migrar `lib/offers.ts` a Supabase.
-- Panel admin para crear/editar ofertas.
-- Campos `verified_at`, `expires_at`, `source_url` y `score`.
-- Verificación automática de condiciones.
-- Sistema de favoritos.
-- Analítica de clics/conversiones.
-- Capa IA para detectar cambios y oportunidades.
-- Email de alertas solo para oportunidades con score alto.
-
-## Importante
-
-Las recompensas de las ofertas pueden cambiar. Los datos de algunas ofertas iniciales proceden de referencias aportadas por el propietario del proyecto y están marcadas como no verificadas. Antes de publicar una recompensa como "Verificada", hay que contrastarla con la fuente oficial.
-
-BENIA no es un banco, broker, exchange ni asesor financiero. Es una plataforma informativa y de referencias.
+BENIA should only publish rewards, conditions and links that can be evidenced. A personal referral link is not automatically a public affiliate link; check the provider's terms before publishing it openly.
